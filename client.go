@@ -667,7 +667,8 @@ func (c *Client) Start() (addr net.Addr, err error) {
 	defer func() {
 		go func() {
 			defer c.clientWaitGroup.Done()
-			for range linesCh {
+			for line := range linesCh {
+				fmt.Println(line)
 			}
 		}()
 	}()
@@ -987,59 +988,17 @@ func (c *Client) logStderr(r io.Reader) {
 		// The line was longer than our max token size, so it's likely
 		// incomplete and won't unmarshal.
 		if isPrefix || continuation {
-			l.Debug(string(line))
+			fmt.Print(string(line))
 
 			// if we're finishing a continued line, add the newline back in
 			if !isPrefix {
-				c.config.Stderr.Write([]byte{'\n'})
+				fmt.Print("\n")
 			}
 
 			continuation = isPrefix
 			continue
 		}
+		fmt.Println(string(line))
 
-		c.config.Stderr.Write([]byte{'\n'})
-
-		entry, err := parseJSON(line)
-		// If output is not JSON format, print directly to Debug
-		if err != nil {
-			// Attempt to infer the desired log level from the commonly used
-			// string prefixes
-			switch line := string(line); {
-			case strings.HasPrefix(line, "[TRACE]"):
-				l.Trace(line)
-			case strings.HasPrefix(line, "[DEBUG]"):
-				l.Debug(line)
-			case strings.HasPrefix(line, "[INFO]"):
-				l.Info(line)
-			case strings.HasPrefix(line, "[WARN]"):
-				l.Warn(line)
-			case strings.HasPrefix(line, "[ERROR]"):
-				l.Error(line)
-			default:
-				l.Debug(line)
-			}
-		} else {
-			out := flattenKVPairs(entry.KVPairs)
-
-			out = append(out, "timestamp", entry.Timestamp.Format(hclog.TimeFormat))
-			switch hclog.LevelFromString(entry.Level) {
-			case hclog.Trace:
-				l.Trace(entry.Message, out...)
-			case hclog.Debug:
-				l.Debug(entry.Message, out...)
-			case hclog.Info:
-				l.Info(entry.Message, out...)
-			case hclog.Warn:
-				l.Warn(entry.Message, out...)
-			case hclog.Error:
-				l.Error(entry.Message, out...)
-			default:
-				// if there was no log level, it's likely this is unexpected
-				// json from something other than hclog, and we should output
-				// it verbatim.
-				l.Debug(string(line))
-			}
-		}
 	}
 }
