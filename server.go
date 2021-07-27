@@ -218,20 +218,7 @@ func protocolVersion(opts *ServeConfig) (int, Protocol, PluginSet) {
 // conditions where a user's fix is unknown.
 //
 // This is the method that plugins should call in their main() functions.
-func Serve(opts *ServeConfig) {
-	exitCode := -1
-	// We use this to trigger an `os.Exit` so that we can execute our other
-	// deferred functions. In test mode, we just output the err to stderr
-	// and return.
-	defer func() {
-		if opts.Test == nil && exitCode >= 0 {
-			os.Exit(exitCode)
-		}
-
-		if opts.Test != nil && opts.Test.CloseCh != nil {
-			close(opts.Test.CloseCh)
-		}
-	}()
+func Serve(ctx context.Context, opts *ServeConfig) error {
 
 	if opts.Test == nil {
 		// Validate the handshake config
@@ -240,8 +227,7 @@ func Serve(opts *ServeConfig) {
 				"Misconfigured ServeConfig given to serve this plugin: no magic cookie\n"+
 					"key or value was set. Please notify the plugin author and report\n"+
 					"this as a bug.\n")
-			exitCode = 1
-			return
+			return nil
 		}
 
 		// First check the cookie
@@ -250,8 +236,7 @@ func Serve(opts *ServeConfig) {
 				"This binary is a plugin. These are not meant to be executed directly.\n"+
 					"Please execute the program that consumes these plugins, which will\n"+
 					"load any plugins automatically\n")
-			exitCode = 1
-			return
+			return nil
 		}
 	}
 
@@ -273,7 +258,7 @@ func Serve(opts *ServeConfig) {
 	listener, err := serverListener()
 	if err != nil {
 		logger.Error("plugin init error", "error", err)
-		return
+		return err
 	}
 
 	// Close the listener on return. We wrap this in a func() on purpose
@@ -287,7 +272,7 @@ func Serve(opts *ServeConfig) {
 		tlsConfig, err = opts.TLSProvider()
 		if err != nil {
 			logger.Error("plugin tls init", "error", err)
-			return
+			return err
 		}
 	}
 
@@ -393,7 +378,7 @@ func Serve(opts *ServeConfig) {
 	// Initialize the servers
 	if err := server.Init(); err != nil {
 		logger.Error("protocol init", "error", err)
-		return
+		return err
 	}
 
 	logger.Debug("plugin address", "network", listener.Addr().Network(), "address", listener.Addr().String())
@@ -462,7 +447,6 @@ func Serve(opts *ServeConfig) {
 	// Accept connections and wait for completion
 	go server.Serve(listener)
 
-	ctx := context.Background()
 	if opts.Test != nil && opts.Test.Context != nil {
 		ctx = opts.Test.Context
 	}
@@ -482,13 +466,16 @@ func Serve(opts *ServeConfig) {
 
 		// Wait for the server itself to shut down
 		<-doneCh
+		return nil
 
 	case <-doneCh:
 		// Note that given the documentation of Serve we should probably be
 		// setting exitCode = 0 and using os.Exit here. That's how it used to
 		// work before extracting this library. However, for years we've done
 		// this so we'll keep this functionality.
+		return nil
 	}
+	return nil
 }
 
 func serverListener() (net.Listener, error) {

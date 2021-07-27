@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"fmt"
+	"golang.org/x/net/context"
 	"os"
 )
 
@@ -13,7 +14,7 @@ type ServeMuxMap map[string]*ServeConfig
 //
 // This command doesn't return until the plugin is done being executed. Any
 // errors are logged or output to stderr.
-func ServeMux(m ServeMuxMap) {
+func ServeMux(ctx context.Context, m ServeMuxMap) error {
 	if len(os.Args) != 2 {
 		fmt.Fprintf(os.Stderr,
 			"Invoked improperly. This is an internal command that shouldn't\n"+
@@ -27,5 +28,5 @@ func ServeMux(m ServeMuxMap) {
 		os.Exit(1)
 	}
 
-	Serve(opts)
+	return Serve(ctx, opts)
 }
