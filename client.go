@@ -348,8 +348,8 @@ func NewClient(config *ClientConfig) (c *Client) {
 // Client returns the protocol client for this connection.
 //
 // Subsequent calls to this will return the same client.
-func (c *Client) Client() (ClientProtocol, error) {
-	_, err := c.Start()
+func (c *Client) Client(ctx context.Context) (ClientProtocol, error) {
+	_, err := c.Start(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -431,7 +431,7 @@ func (c *Client) Kill() {
 	graceful := false
 	if addr != nil {
 		// Close the client to cleanly exit the process.
-		client, err := c.Client()
+		client, err := c.Client(context.Background())
 		if err == nil {
 			err = client.Close()
 
@@ -476,7 +476,7 @@ func (c *Client) Kill() {
 // This method is safe to call multiple times. Subsequent calls have no effect.
 // Once a client has been started once, it cannot be started again, even if
 // it was killed.
-func (c *Client) Start() (addr net.Addr, err error) {
+func (c *Client) Start(ctx context.Context) (addr net.Addr, err error) {
 	c.l.Lock()
 	defer c.l.Unlock()
 
@@ -584,6 +584,14 @@ func (c *Client) Start() (addr net.Addr, err error) {
 	// Set the process
 	c.process = cmd.Process
 	c.logger.Debug("plugin started", "path", cmd.Path, "pid", c.process.Pid)
+
+	go func() {
+		<-ctx.Done()
+		err := cmd.Process.Kill()
+		if err != nil {
+			c.logger.Error("error during killing child process : %v", err)
+		}
+	}()
 
 	// Make sure the command is properly cleaned up if there is an error
 	defer func() {
@@ -921,7 +929,7 @@ func (c *Client) ReattachConfig() *ReattachConfig {
 // is recommended you call Start explicitly before calling Protocol to ensure
 // no errors occur.
 func (c *Client) Protocol() Protocol {
-	_, err := c.Start()
+	_, err := c.Start(context.Background())
 	if err != nil {
 		return ProtocolInvalid
 	}
