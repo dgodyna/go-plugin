@@ -15,6 +15,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -533,9 +534,12 @@ func (c *Client) Start(ctx context.Context) (addr net.Addr, err error) {
 	cmd.Env = append(cmd.Env, os.Environ()...)
 	cmd.Env = append(cmd.Env, env...)
 	cmd.Stdin = os.Stdin
-	cmd.Stderr = os.Stderr
 
 	cmdStdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, err
+	}
+	cmdStderr, err := cmd.StderrPipe()
 	if err != nil {
 		return nil, err
 	}
@@ -608,6 +612,8 @@ func (c *Client) Start(ctx context.Context) (addr net.Addr, err error) {
 	// Start goroutine that logs the stderr
 	c.clientWaitGroup.Add(1)
 	c.stderrWaitGroup.Add(1)
+	// logStderr calls Done()
+	go c.logStderr(cmdStderr)
 
 	c.clientWaitGroup.Add(1)
 	go func() {
@@ -670,7 +676,7 @@ func (c *Client) Start(ctx context.Context) (addr net.Addr, err error) {
 		go func() {
 			defer c.clientWaitGroup.Done()
 			for line := range linesCh {
-				fmt.Fprintf(os.Stderr, line)
+				fmt.Println(line)
 			}
 		}()
 	}()
@@ -962,4 +968,45 @@ func (c *Client) dialer(_ string, timeout time.Duration) (net.Conn, error) {
 	}
 
 	return conn, nil
+}
+
+var stdErrBufferSize = 64 * 1024
+
+func (c *Client) logStderr(r io.Reader) {
+	defer c.clientWaitGroup.Done()
+	defer c.stderrWaitGroup.Done()
+	l := c.logger.Named(filepath.Base(c.config.Cmd.Path))
+
+	reader := bufio.NewReaderSize(r, stdErrBufferSize)
+	// continuation indicates the previous line was a prefix
+	continuation := false
+
+	for {
+		line, isPrefix, err := reader.ReadLine()
+		switch {
+		case err == io.EOF:
+			return
+		case err != nil:
+			l.Error("reading plugin stderr", "error", err)
+			return
+		}
+
+		c.config.Stderr.Write(line)
+
+		// The line was longer than our max token size, so it's likely
+		// incomplete and won't unmarshal.
+		if isPrefix || continuation {
+			fmt.Print(string(line))
+
+			// if we're finishing a continued line, add the newline back in
+			if !isPrefix {
+				fmt.Print("\n")
+			}
+
+			continuation = isPrefix
+			continue
+		}
+		fmt.Println(string(line))
+
+	}
 }
