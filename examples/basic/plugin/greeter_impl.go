@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 
 	"github.com/hashicorp/go-hclog"
@@ -45,7 +46,7 @@ func main() {
 
 	logger.Debug("message from plugin", "foo", "bar")
 
-	plugin.Serve(&plugin.ServeConfig{
+	plugin.Serve(context.Background(), &plugin.ServeConfig{
 		HandshakeConfig: handshakeConfig,
 		Plugins:         pluginMap,
 	})

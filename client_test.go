@@ -12,7 +12,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -1395,38 +1394,5 @@ this line is short
 
 	if read != msg {
 		t.Fatalf("\nexpected output: %q\ngot output:      %q", msg, read)
-	}
-}
-
-func Test_adjustLogLineParams(t *testing.T) {
-
-	// for proper logging in plugin stderr side in head app
-	os.Setenv("X-Request-Id", "X-Request-Id")
-	os.Setenv("thread", "thread")
-	os.Setenv("bill processor pid", "bill processor pid")
-	os.Setenv("bill canceler pid", "bill canceler pid")
-
-	type args struct {
-		l []byte
-	}
-	tests := []struct {
-		name string
-		args args
-		want []byte
-	}{
-		{
-			name: "adjust",
-			args: args{
-				l: []byte("{\"time\":\"2024-04-15T08:19:03.758027Z\",\"level\":\"WARNING\",\"source\":\"components/rating-and-billing/VPAs/CORE/DBB/SRC/DBBodbcConnection.cc:605\",\"message\":\"DBB_SQL_WARNING:ODBC returned status 1. Code -1. State: 00000. Text: INFO: pg_hint_plan: hint syntax error at or near \\\"INDEX(PVBILLSUMMARYALL.BILLSUMMARY BILLSUMMARY_PK) INDEX(PVBILLSUMMARYALL.BILLSUMMARYLITE BILLSUMMARYLITE_PK)\\\" DETAIL: Unrecognized hint keyword \\\"INDEX\\\".\"}\n"),
-			},
-			want: []byte("{\"X-Request-Id\":\"X-Request-Id\",\"level\":\"WARNING\",\"message\":\"DBB_SQL_WARNING:ODBC returned status 1. Code -1. State: 00000. Text: INFO: pg_hint_plan: hint syntax error at or near \\\"INDEX(PVBILLSUMMARYALL.BILLSUMMARY BILLSUMMARY_PK) INDEX(PVBILLSUMMARYALL.BILLSUMMARYLITE BILLSUMMARYLITE_PK)\\\" DETAIL: Unrecognized hint keyword \\\"INDEX\\\".\",\"source\":\"components/rating-and-billing/VPAs/CORE/DBB/SRC/DBBodbcConnection.cc:605\",\"thread\":\"thread\",\"time\":\"2024-04-15T08:19:03.758027Z\"}"),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := adjustLogLineParams(tt.args.l); !reflect.DeepEqual(string(got), string(tt.want)) {
-				t.Errorf("adjustLogLineParams() = %v, want %v", string(got), string(tt.want))
-			}
-		})
 	}
 }

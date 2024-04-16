@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -29,7 +30,7 @@ func main() {
 	defer client.Kill()
 
 	// Connect via RPC
-	rpcClient, err := client.Client()
+	rpcClient, err := client.Client(context.Background())
 	if err != nil {
 		log.Fatal(err)
 	}

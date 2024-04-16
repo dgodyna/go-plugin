@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"golang.org/x/net/context"
 	"io/ioutil"
 	"log"
 	"os"
@@ -26,7 +27,7 @@ func main() {
 	defer client.Kill()
 
 	// Connect via RPC
-	rpcClient, err := client.Client()
+	rpcClient, err := client.Client(context.Background())
 	if err != nil {
 		fmt.Println("Error:", err.Error())
 		os.Exit(1)

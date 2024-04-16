@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"golang.org/x/net/context"
 	"io/ioutil"
 
 	"github.com/hashicorp/go-plugin"
@@ -22,7 +23,7 @@ func (KV) Get(key string) ([]byte, error) {
 }
 
 func main() {
-	plugin.Serve(&plugin.ServeConfig{
+	plugin.Serve(context.Background(), &plugin.ServeConfig{
 		HandshakeConfig: shared.Handshake,
 		Plugins: map[string]plugin.Plugin{
 			"kv": &shared.KVPlugin{Impl: &KV{}},

@@ -10,6 +10,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"hash"
 	"io"
 	"io/ioutil"
@@ -1009,12 +1011,11 @@ func (c *Client) logStderr(r io.Reader) {
 			continuation = isPrefix
 			continue
 		}
-		fmt.Fprint(os.Stderr, string(adjustLogLineParams(line)))
-
+		logLine(line)
 	}
 }
 
-func adjustLogLineParams(l []byte) []byte {
+func logLine(l []byte) {
 
 	// for proper logging in plugin stderr side in head app
 	requestId := os.Getenv("X-Request-Id")
@@ -1024,8 +1025,9 @@ func adjustLogLineParams(l []byte) []byte {
 
 	logMessage := map[string]interface{}{}
 	if err := json.Unmarshal(l, &logMessage); err != nil {
-		return l
+		getLogger().Msg(string(l))
 	}
+
 	if requestId != "" {
 		logMessage["X-Request-Id"] = requestId
 	}
@@ -1046,8 +1048,40 @@ func adjustLogLineParams(l []byte) []byte {
 	}
 	jsonMessage, err := json.Marshal(logMessage)
 	if err != nil {
-		return l
+		getLogger().Msg(string(l))
 	}
 
-	return jsonMessage
+	fmt.Fprintln(os.Stderr, string(jsonMessage))
+}
+
+func getLogger() *zerolog.Event {
+	event := log.Logger.Info()
+	// for proper logging in plugin stderr side in head app
+	requestId := os.Getenv("X-Request-Id")
+	thread := os.Getenv("thread")
+	bPid := os.Getenv("bill processor pid")
+	cPid := os.Getenv("bill canceler pid")
+
+	if requestId != "" {
+		event = event.Str("X-Request-Id", requestId)
+	}
+	if thread != "" {
+		event = event.Str("thread", thread)
+
+	}
+	if bPid != "" {
+		bPidInt, err := strconv.Atoi(bPid)
+		if err == nil {
+			event = event.Int("bill processor pid", bPidInt)
+		}
+	}
+	if cPid != "" {
+		cPidInt, err := strconv.Atoi(cPid)
+		if err == nil {
+			event = event.Int("bill canceler pid", cPidInt)
+		}
+	}
+
+	return event
+
 }
