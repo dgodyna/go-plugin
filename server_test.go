@@ -20,7 +20,7 @@ func TestServer_testMode(t *testing.T) {
 
 	ch := make(chan *ReattachConfig, 1)
 	closeCh := make(chan struct{})
-	go Serve(&ServeConfig{
+	go Serve(context.TODO(), &ServeConfig{
 		HandshakeConfig: testHandshake,
 		Plugins:         testGRPCPluginMap,
 		GRPCServer:      DefaultGRPCServer,
@@ -55,7 +55,7 @@ func TestServer_testMode(t *testing.T) {
 		Reattach:         config,
 		AllowedProtocols: []Protocol{ProtocolGRPC},
 	})
-	client, err := c.Client()
+	client, err := c.Client(context.TODO())
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -175,7 +175,7 @@ func TestServer_testStdLogger(t *testing.T) {
 
 	// make a server, but we don't need to attach to it
 	ch := make(chan *ReattachConfig, 1)
-	go Serve(&ServeConfig{
+	go Serve(context.TODO(), &ServeConfig{
 		HandshakeConfig: testHandshake,
 		Plugins:         testGRPCPluginMap,
 		GRPCServer:      DefaultGRPCServer,

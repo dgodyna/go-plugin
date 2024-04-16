@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"hash"
@@ -970,7 +971,8 @@ func (c *Client) dialer(_ string, timeout time.Duration) (net.Conn, error) {
 	return conn, nil
 }
 
-var stdErrBufferSize = 64 * 1024
+// 3MB
+var stdErrBufferSize = 3 * 1024 * 1024
 
 func (c *Client) logStderr(r io.Reader) {
 	defer c.clientWaitGroup.Done()
@@ -1009,4 +1011,42 @@ func (c *Client) logStderr(r io.Reader) {
 		fmt.Println(string(line))
 
 	}
+}
+
+func adjustLogLineParams(l []byte) []byte {
+
+	// for proper logging in plugin stderr side in head app
+	requestId := os.Getenv("X-Request-Id")
+	thread := os.Getenv("thread")
+	bPid := os.Getenv("bill processor pid")
+	cPid := os.Getenv("bill canceler pid")
+
+	logMessage := map[string]interface{}{}
+	if err := json.Unmarshal(l, &logMessage); err != nil {
+		return l
+	}
+	if requestId != "" {
+		logMessage["X-Request-Id"] = requestId
+	}
+	if thread != "" {
+		logMessage["thread"] = thread
+	}
+	if bPid != "" {
+		bPidInt, err := strconv.Atoi(bPid)
+		if err == nil {
+			logMessage["bill processor pid"] = bPidInt
+		}
+	}
+	if cPid != "" {
+		cPidInt, err := strconv.Atoi(cPid)
+		if err == nil {
+			logMessage["bill canceler pid"] = cPidInt
+		}
+	}
+	jsonMessage, err := json.Marshal(logMessage)
+	if err != nil {
+		return l
+	}
+
+	return jsonMessage
 }

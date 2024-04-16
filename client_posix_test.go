@@ -1,8 +1,10 @@
+//go:build !windows
 // +build !windows
 
 package plugin
 
 import (
+	"golang.org/x/net/context"
 	"os"
 	"reflect"
 	"syscall"
@@ -26,7 +28,7 @@ func TestClient_testInterfaceReattach(t *testing.T) {
 	})
 
 	// Start it so we can get the reattach info
-	if _, err := c.Start(); err != nil {
+	if _, err := c.Start(context.TODO()); err != nil {
 		t.Fatalf("err should be nil, got %s", err)
 	}
 
@@ -53,7 +55,7 @@ func TestClient_testInterfaceReattach(t *testing.T) {
 	})
 
 	// Start shouldn't error
-	if _, err := c.Start(); err != nil {
+	if _, err := c.Start(context.TODO()); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
@@ -64,7 +66,7 @@ func TestClient_testInterfaceReattach(t *testing.T) {
 	}
 
 	// Grab the RPC client
-	client, err := c.Client()
+	client, err := c.Client(context.TODO())
 	if err != nil {
 		t.Fatalf("err should be nil, got %s", err)
 	}

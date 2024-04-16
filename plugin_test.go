@@ -524,7 +524,7 @@ func TestHelperProcess(*testing.T) {
 			}
 		}()
 
-		Serve(&ServeConfig{
+		Serve(context.TODO(), &ServeConfig{
 			HandshakeConfig: testHandshake,
 			Plugins:         testPluginMap,
 		})
@@ -532,7 +532,7 @@ func TestHelperProcess(*testing.T) {
 		// Exit
 		return
 	case "test-grpc":
-		Serve(&ServeConfig{
+		Serve(context.TODO(), &ServeConfig{
 			HandshakeConfig: testHandshake,
 			Plugins:         testGRPCPluginMap,
 			GRPCServer:      DefaultGRPCServer,
@@ -542,7 +542,7 @@ func TestHelperProcess(*testing.T) {
 		os.Exit(0)
 	case "test-grpc-tls":
 		// Serve!
-		Serve(&ServeConfig{
+		Serve(context.TODO(), &ServeConfig{
 			HandshakeConfig: testHandshake,
 			Plugins:         testGRPCPluginMap,
 			GRPCServer:      DefaultGRPCServer,
@@ -552,7 +552,7 @@ func TestHelperProcess(*testing.T) {
 		// Shouldn't reach here but make sure we exit anyways
 		os.Exit(0)
 	case "test-interface":
-		Serve(&ServeConfig{
+		Serve(context.TODO(), &ServeConfig{
 			HandshakeConfig: testHandshake,
 			Plugins:         testPluginMap,
 		})
@@ -560,14 +560,14 @@ func TestHelperProcess(*testing.T) {
 		// Shouldn't reach here but make sure we exit anyways
 		os.Exit(0)
 	case "test-interface-logger-netrpc":
-		Serve(&ServeConfig{
+		Serve(context.TODO(), &ServeConfig{
 			HandshakeConfig: testHandshake,
 			Plugins:         testPluginMap,
 		})
 		// Shouldn't reach here but make sure we exit anyways
 		os.Exit(0)
 	case "test-interface-logger-grpc":
-		Serve(&ServeConfig{
+		Serve(context.TODO(), &ServeConfig{
 			HandshakeConfig: testHandshake,
 			Plugins:         testPluginMap,
 			GRPCServer:      DefaultGRPCServer,
@@ -576,7 +576,7 @@ func TestHelperProcess(*testing.T) {
 		os.Exit(0)
 	case "test-interface-daemon":
 		// Serve!
-		Serve(&ServeConfig{
+		Serve(context.TODO(), &ServeConfig{
 			HandshakeConfig: testHandshake,
 			Plugins:         testPluginMap,
 		})
@@ -585,7 +585,7 @@ func TestHelperProcess(*testing.T) {
 		os.Exit(0)
 	case "test-interface-tls":
 		// Serve!
-		Serve(&ServeConfig{
+		Serve(context.TODO(), &ServeConfig{
 			HandshakeConfig: testHandshake,
 			Plugins:         testPluginMap,
 			TLSProvider:     helperTLSProvider,
@@ -596,7 +596,7 @@ func TestHelperProcess(*testing.T) {
 
 	case "test-interface-mtls":
 		// Serve!
-		Serve(&ServeConfig{
+		Serve(context.TODO(), &ServeConfig{
 			HandshakeConfig: testVersionedHandshake,
 			Plugins:         testPluginMap,
 		})
@@ -606,7 +606,7 @@ func TestHelperProcess(*testing.T) {
 
 	case "test-versioned-plugins":
 		// Serve!
-		Serve(&ServeConfig{
+		Serve(context.TODO(), &ServeConfig{
 			HandshakeConfig: testVersionedHandshake,
 			VersionedPlugins: map[int]PluginSet{
 				2: testGRPCPluginMap,
@@ -619,7 +619,7 @@ func TestHelperProcess(*testing.T) {
 		os.Exit(0)
 	case "test-proto-upgraded-plugin":
 		// Serve 2 plugins over different protocols
-		Serve(&ServeConfig{
+		Serve(context.TODO(), &ServeConfig{
 			HandshakeConfig: testVersionedHandshake,
 			VersionedPlugins: map[int]PluginSet{
 				1: PluginSet{
@@ -635,7 +635,7 @@ func TestHelperProcess(*testing.T) {
 		os.Exit(0)
 	case "test-proto-upgraded-client":
 		// Serve 2 plugins over different protocols
-		Serve(&ServeConfig{
+		Serve(context.TODO(), &ServeConfig{
 			HandshakeConfig: HandshakeConfig{
 				ProtocolVersion:  2,
 				MagicCookieKey:   "TEST_MAGIC_COOKIE",
@@ -650,7 +650,7 @@ func TestHelperProcess(*testing.T) {
 		os.Exit(0)
 	case "test-mtls":
 		// Serve 2 plugins over different protocols
-		Serve(&ServeConfig{
+		Serve(context.TODO(), &ServeConfig{
 			HandshakeConfig: HandshakeConfig{
 				ProtocolVersion:  2,
 				MagicCookieKey:   "TEST_MAGIC_COOKIE",

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"fmt"
+	"golang.org/x/net/context"
 	"io"
 	"io/ioutil"
 	"log"
@@ -11,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -29,7 +31,7 @@ func TestClient(t *testing.T) {
 	defer c.Kill()
 
 	// Test that it parses the proper address
-	addr, err := c.Start()
+	addr, err := c.Start(context.TODO())
 	if err != nil {
 		t.Fatalf("err should be nil, got %s", err)
 	}
@@ -77,7 +79,7 @@ func TestClient_killStart(t *testing.T) {
 	}
 
 	// Test that it parses the proper address
-	if _, err := c.Start(); err == nil {
+	if _, err := c.Start(context.TODO()); err == nil {
 		t.Fatal("expected error")
 	}
 
@@ -127,7 +129,7 @@ func TestClient_testCleanup(t *testing.T) {
 	})
 
 	// Grab the client so the process starts
-	if _, err := c.Client(); err != nil {
+	if _, err := c.Client(context.TODO()); err != nil {
 		c.Kill()
 		t.Fatalf("err: %s", err)
 	}
@@ -151,7 +153,7 @@ func TestClient_testInterface(t *testing.T) {
 	defer c.Kill()
 
 	// Grab the RPC client
-	client, err := c.Client()
+	client, err := c.Client(context.TODO())
 	if err != nil {
 		t.Fatalf("err should be nil, got %s", err)
 	}
@@ -195,7 +197,7 @@ func TestClient_grpc_servercrash(t *testing.T) {
 	})
 	defer c.Kill()
 
-	if _, err := c.Start(); err != nil {
+	if _, err := c.Start(context.TODO()); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
@@ -204,7 +206,7 @@ func TestClient_grpc_servercrash(t *testing.T) {
 	}
 
 	// Grab the RPC client
-	client, err := c.Client()
+	client, err := c.Client(context.TODO())
 	if err != nil {
 		t.Fatalf("err should be nil, got %s", err)
 	}
@@ -239,7 +241,7 @@ func TestClient_grpc(t *testing.T) {
 	})
 	defer c.Kill()
 
-	if _, err := c.Start(); err != nil {
+	if _, err := c.Start(context.TODO()); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
@@ -248,7 +250,7 @@ func TestClient_grpc(t *testing.T) {
 	}
 
 	// Grab the RPC client
-	client, err := c.Client()
+	client, err := c.Client(context.TODO())
 	if err != nil {
 		t.Fatalf("err should be nil, got %s", err)
 	}
@@ -291,7 +293,7 @@ func TestClient_grpcNotAllowed(t *testing.T) {
 	})
 	defer c.Kill()
 
-	if _, err := c.Start(); err == nil {
+	if _, err := c.Start(context.TODO()); err == nil {
 		t.Fatal("should error")
 	}
 }
@@ -310,7 +312,7 @@ func TestClient_grpcSyncStdio(t *testing.T) {
 	})
 	defer c.Kill()
 
-	if _, err := c.Start(); err != nil {
+	if _, err := c.Start(context.TODO()); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
@@ -319,7 +321,7 @@ func TestClient_grpcSyncStdio(t *testing.T) {
 	}
 
 	// Grab the RPC client
-	client, err := c.Client()
+	client, err := c.Client(context.TODO())
 	if err != nil {
 		t.Fatalf("err should be nil, got %s", err)
 	}
@@ -363,7 +365,7 @@ func TestClient_cmdAndReattach(t *testing.T) {
 	c := NewClient(config)
 	defer c.Kill()
 
-	_, err := c.Start()
+	_, err := c.Start(context.TODO())
 	if err == nil {
 		t.Fatal("err should not be nil")
 	}
@@ -379,7 +381,7 @@ func TestClient_reattach(t *testing.T) {
 	defer c.Kill()
 
 	// Grab the RPC client
-	_, err := c.Client()
+	_, err := c.Client(context.TODO())
 	if err != nil {
 		t.Fatalf("err should be nil, got %s", err)
 	}
@@ -395,7 +397,7 @@ func TestClient_reattach(t *testing.T) {
 	})
 
 	// Grab the RPC client
-	client, err := c.Client()
+	client, err := c.Client(context.TODO())
 	if err != nil {
 		t.Fatalf("err should be nil, got %s", err)
 	}
@@ -439,7 +441,7 @@ func TestClient_reattachNoProtocol(t *testing.T) {
 	defer c.Kill()
 
 	// Grab the RPC client
-	_, err := c.Client()
+	_, err := c.Client(context.TODO())
 	if err != nil {
 		t.Fatalf("err should be nil, got %s", err)
 	}
@@ -456,7 +458,7 @@ func TestClient_reattachNoProtocol(t *testing.T) {
 	})
 
 	// Grab the RPC client
-	client, err := c.Client()
+	client, err := c.Client(context.TODO())
 	if err != nil {
 		t.Fatalf("err should be nil, got %s", err)
 	}
@@ -501,7 +503,7 @@ func TestClient_reattachGRPC(t *testing.T) {
 	defer c.Kill()
 
 	// Grab the RPC client
-	_, err := c.Client()
+	_, err := c.Client(context.TODO())
 	if err != nil {
 		t.Fatalf("err should be nil, got %s", err)
 	}
@@ -518,7 +520,7 @@ func TestClient_reattachGRPC(t *testing.T) {
 	})
 
 	// Grab the RPC client
-	client, err := c.Client()
+	client, err := c.Client(context.TODO())
 	if err != nil {
 		t.Fatalf("err should be nil, got %s", err)
 	}
@@ -581,7 +583,7 @@ func TestClient_reattachNotFound(t *testing.T) {
 	})
 
 	// Start shouldn't error
-	if _, err := c.Start(); err == nil {
+	if _, err := c.Start(context.TODO()); err == nil {
 		t.Fatal("should error")
 	} else if err != ErrProcessNotFound {
 		t.Fatalf("err: %s", err)
@@ -599,7 +601,7 @@ func TestClientStart_badVersion(t *testing.T) {
 	c := NewClient(config)
 	defer c.Kill()
 
-	_, err := c.Start()
+	_, err := c.Start(context.TODO())
 	if err == nil {
 		t.Fatal("err should not be nil")
 	}
@@ -617,7 +619,7 @@ func TestClientStart_badNegotiatedVersion(t *testing.T) {
 	c := NewClient(config)
 	defer c.Kill()
 
-	_, err := c.Start()
+	_, err := c.Start(context.TODO())
 	if err == nil {
 		t.Fatal("err should not be nil")
 	}
@@ -635,7 +637,7 @@ func TestClient_Start_Timeout(t *testing.T) {
 	c := NewClient(config)
 	defer c.Kill()
 
-	_, err := c.Start()
+	_, err := c.Start(context.TODO())
 	if err == nil {
 		t.Fatal("err should not be nil")
 	}
@@ -652,7 +654,7 @@ func TestClient_Stderr(t *testing.T) {
 	})
 	defer c.Kill()
 
-	if _, err := c.Start(); err != nil {
+	if _, err := c.Start(context.TODO()); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
@@ -696,7 +698,7 @@ func TestClient_StderrJSON(t *testing.T) {
 	})
 	defer c.Kill()
 
-	if _, err := c.Start(); err != nil {
+	if _, err := c.Start(context.TODO()); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
@@ -746,7 +748,7 @@ func TestClient_textLogLevel(t *testing.T) {
 	})
 	defer c.Kill()
 
-	if _, err := c.Start(); err != nil {
+	if _, err := c.Start(context.TODO()); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
@@ -798,7 +800,7 @@ func TestClient_Stdin(t *testing.T) {
 	})
 	defer c.Kill()
 
-	_, err = c.Start()
+	_, err = c.Start(context.TODO())
 	if err != nil {
 		t.Fatalf("error: %s", err)
 	}
@@ -831,7 +833,7 @@ func TestClient_SecureConfig(t *testing.T) {
 	})
 
 	// Grab the RPC client, should error
-	_, err := c.Client()
+	_, err := c.Client(context.TODO())
 	c.Kill()
 	if err != ErrChecksumsDoNotMatch {
 		t.Fatalf("err should be %s, got %s", ErrChecksumsDoNotMatch, err)
@@ -868,7 +870,7 @@ func TestClient_SecureConfig(t *testing.T) {
 	defer c.Kill()
 
 	// Grab the RPC client
-	_, err = c.Client()
+	_, err = c.Client(context.TODO())
 	if err != nil {
 		t.Fatalf("err should be nil, got %s", err)
 	}
@@ -885,7 +887,7 @@ func TestClient_TLS(t *testing.T) {
 	defer cBad.Kill()
 
 	// Grab the RPC client
-	clientBad, err := cBad.Client()
+	clientBad, err := cBad.Client(context.TODO())
 	if err != nil {
 		t.Fatalf("err should be nil, got %s", err)
 	}
@@ -914,7 +916,7 @@ func TestClient_TLS(t *testing.T) {
 	defer c.Kill()
 
 	// Grab the RPC client
-	client, err := c.Client()
+	client, err := c.Client(context.TODO())
 	if err != nil {
 		t.Fatalf("err should be nil, got %s", err)
 	}
@@ -966,7 +968,7 @@ func TestClient_TLS_grpc(t *testing.T) {
 	defer c.Kill()
 
 	// Grab the RPC client
-	client, err := c.Client()
+	client, err := c.Client(context.TODO())
 	if err != nil {
 		t.Fatalf("err should be nil, got %s", err)
 	}
@@ -1008,7 +1010,7 @@ func TestClient_secureConfigAndReattach(t *testing.T) {
 	c := NewClient(config)
 	defer c.Kill()
 
-	_, err := c.Start()
+	_, err := c.Start(context.TODO())
 	if err != ErrSecureConfigAndReattach {
 		t.Fatalf("err should not be %s, got %s", ErrSecureConfigAndReattach, err)
 	}
@@ -1024,7 +1026,7 @@ func TestClient_ping(t *testing.T) {
 	defer c.Kill()
 
 	// Get the client
-	client, err := c.Client()
+	client, err := c.Client(context.TODO())
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -1052,7 +1054,7 @@ func TestClient_wrongVersion(t *testing.T) {
 	defer c.Kill()
 
 	// Get the client
-	_, err := c.Client()
+	_, err := c.Client(context.TODO())
 	if err == nil {
 		t.Fatal("expected incorrect protocol version server")
 	}
@@ -1071,7 +1073,7 @@ func TestClient_legacyClient(t *testing.T) {
 	defer c.Kill()
 
 	// Get the client
-	client, err := c.Client()
+	client, err := c.Client(context.TODO())
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -1101,7 +1103,7 @@ func TestClient_legacyServer(t *testing.T) {
 	defer c.Kill()
 
 	// Get the client
-	client, err := c.Client()
+	client, err := c.Client(context.TODO())
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -1128,7 +1130,7 @@ func TestClient_versionedClient(t *testing.T) {
 	})
 	defer c.Kill()
 
-	if _, err := c.Start(); err != nil {
+	if _, err := c.Start(context.TODO()); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
@@ -1137,7 +1139,7 @@ func TestClient_versionedClient(t *testing.T) {
 	}
 
 	// Grab the RPC client
-	client, err := c.Client()
+	client, err := c.Client(context.TODO())
 	if err != nil {
 		t.Fatalf("err should be nil, got %s", err)
 	}
@@ -1179,7 +1181,7 @@ func TestClient_mtlsClient(t *testing.T) {
 	})
 	defer c.Kill()
 
-	if _, err := c.Start(); err != nil {
+	if _, err := c.Start(context.TODO()); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
@@ -1188,7 +1190,7 @@ func TestClient_mtlsClient(t *testing.T) {
 	}
 
 	// Grab the RPC client
-	client, err := c.Client()
+	client, err := c.Client(context.TODO())
 	if err != nil {
 		t.Fatalf("err should be nil, got %s", err)
 	}
@@ -1233,12 +1235,12 @@ func TestClient_mtlsNetRPCClient(t *testing.T) {
 	})
 	defer c.Kill()
 
-	if _, err := c.Start(); err != nil {
+	if _, err := c.Start(context.TODO()); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
 	// Grab the RPC client
-	client, err := c.Client()
+	client, err := c.Client(context.TODO())
 	if err != nil {
 		t.Fatalf("err should be nil, got %s", err)
 	}
@@ -1296,7 +1298,7 @@ func testClient_logger(t *testing.T, proto string) {
 	defer c.Kill()
 
 	// Grab the RPC client
-	client, err := c.Client()
+	client, err := c.Client(context.TODO())
 	if err != nil {
 		t.Fatalf("err should be nil, got %s", err)
 	}
@@ -1393,5 +1395,38 @@ this line is short
 
 	if read != msg {
 		t.Fatalf("\nexpected output: %q\ngot output:      %q", msg, read)
+	}
+}
+
+func Test_adjustLogLineParams(t *testing.T) {
+
+	// for proper logging in plugin stderr side in head app
+	os.Setenv("X-Request-Id", "X-Request-Id")
+	os.Setenv("thread", "thread")
+	os.Setenv("bill processor pid", "bill processor pid")
+	os.Setenv("bill canceler pid", "bill canceler pid")
+
+	type args struct {
+		l []byte
+	}
+	tests := []struct {
+		name string
+		args args
+		want []byte
+	}{
+		{
+			name: "adjust",
+			args: args{
+				l: []byte("{\"time\":\"2024-04-15T08:19:03.758027Z\",\"level\":\"WARNING\",\"source\":\"components/rating-and-billing/VPAs/CORE/DBB/SRC/DBBodbcConnection.cc:605\",\"message\":\"DBB_SQL_WARNING:ODBC returned status 1. Code -1. State: 00000. Text: INFO: pg_hint_plan: hint syntax error at or near \\\"INDEX(PVBILLSUMMARYALL.BILLSUMMARY BILLSUMMARY_PK) INDEX(PVBILLSUMMARYALL.BILLSUMMARYLITE BILLSUMMARYLITE_PK)\\\" DETAIL: Unrecognized hint keyword \\\"INDEX\\\".\"}\n"),
+			},
+			want: []byte("{\"X-Request-Id\":\"X-Request-Id\",\"level\":\"WARNING\",\"message\":\"DBB_SQL_WARNING:ODBC returned status 1. Code -1. State: 00000. Text: INFO: pg_hint_plan: hint syntax error at or near \\\"INDEX(PVBILLSUMMARYALL.BILLSUMMARY BILLSUMMARY_PK) INDEX(PVBILLSUMMARYALL.BILLSUMMARYLITE BILLSUMMARYLITE_PK)\\\" DETAIL: Unrecognized hint keyword \\\"INDEX\\\".\",\"source\":\"components/rating-and-billing/VPAs/CORE/DBB/SRC/DBBodbcConnection.cc:605\",\"thread\":\"thread\",\"time\":\"2024-04-15T08:19:03.758027Z\"}"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := adjustLogLineParams(tt.args.l); !reflect.DeepEqual(string(got), string(tt.want)) {
+				t.Errorf("adjustLogLineParams() = %v, want %v", string(got), string(tt.want))
+			}
+		})
 	}
 }
