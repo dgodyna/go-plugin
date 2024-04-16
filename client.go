@@ -579,6 +579,7 @@ func (c *Client) Start(ctx context.Context) (addr net.Addr, err error) {
 	c.logger.Debug("starting plugin", "path", cmd.Path, "args", cmd.Args)
 	err = cmd.Start()
 	if err != nil {
+		c.logger.Error("error during plugin start: %v", err)
 		return
 	}
 
@@ -1008,7 +1009,7 @@ func (c *Client) logStderr(r io.Reader) {
 			continuation = isPrefix
 			continue
 		}
-		fmt.Println(string(line))
+		fmt.Fprint(os.Stderr, string(adjustLogLineParams(line)))
 
 	}
 }
