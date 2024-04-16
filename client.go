@@ -18,7 +18,6 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -445,10 +444,10 @@ func (c *Client) Kill() {
 			if err != nil {
 				// If there was an error just log it. We're going to force
 				// kill in a moment anyways.
-				c.logger.Warn("error closing client during Kill", "err", err)
+				log.Logger.Warn().Msgf("error closing client during Kill: %v", err)
 			}
 		} else {
-			c.logger.Error("client", "error", err)
+			log.Logger.Error().Msgf("client error: %v", err)
 		}
 	}
 
@@ -458,14 +457,14 @@ func (c *Client) Kill() {
 	if graceful {
 		select {
 		case <-c.doneCtx.Done():
-			c.logger.Debug("plugin exited")
+			log.Logger.Debug().Msg("plugin exited")
 			return
 		case <-time.After(2 * time.Second):
 		}
 	}
 
 	// If graceful exiting failed, just kill it
-	c.logger.Warn("plugin failed to exit gracefully")
+	log.Logger.Warn().Msgf("plugin failed to exit gracefully")
 	process.Kill()
 
 	c.l.Lock()
@@ -558,15 +557,15 @@ func (c *Client) Start(ctx context.Context) (addr net.Addr, err error) {
 	// Setup a temporary certificate for client/server mtls, and send the public
 	// certificate to the plugin.
 	if c.config.AutoMTLS {
-		c.logger.Info("configuring client automatic mTLS")
+		log.Logger.Info().Msg("configuring client automatic mTLS")
 		certPEM, keyPEM, err := generateCert()
 		if err != nil {
-			c.logger.Error("failed to generate client certificate", "error", err)
+			log.Logger.Error().Msgf("failed to generate client certificate: %v", err)
 			return nil, err
 		}
 		cert, err := tls.X509KeyPair(certPEM, keyPEM)
 		if err != nil {
-			c.logger.Error("failed to parse client certificate", "error", err)
+			log.Logger.Error().Msgf("failed to parse client certificate: %v", err)
 			return nil, err
 		}
 
@@ -578,22 +577,22 @@ func (c *Client) Start(ctx context.Context) (addr net.Addr, err error) {
 		}
 	}
 
-	c.logger.Debug("starting plugin", "path", cmd.Path, "args", cmd.Args)
+	log.Logger.Debug().Msgf("starting plugin path: %v, args: %v", cmd.Path, cmd.Args)
 	err = cmd.Start()
 	if err != nil {
-		c.logger.Error("error during plugin start: %v", err)
+		log.Logger.Error().Msgf("error during plugin start: %v", err)
 		return
 	}
 
 	// Set the process
 	c.process = cmd.Process
-	c.logger.Debug("plugin started", "path", cmd.Path, "pid", c.process.Pid)
+	log.Logger.Debug().Msgf("plugin started path: %v, pid: %v", cmd.Path, c.process.Pid)
 
 	go func() {
 		<-ctx.Done()
 		err := cmd.Process.Kill()
 		if err != nil {
-			c.logger.Error("error during killing child process : %v", err)
+			log.Logger.Error().Msgf("error during killing child process : %v", err)
 		}
 	}()
 
@@ -648,7 +647,7 @@ func (c *Client) Start(ctx context.Context) (addr net.Addr, err error) {
 		}
 
 		// Log and make sure to flush the logs write away
-		c.logger.Debug("plugin process exited", debugMsgArgs...)
+		log.Logger.Debug().Msgf("plugin process exited: %+v", debugMsgArgs...)
 		os.Stderr.Sync()
 
 		// Set that we exited, which takes a lock
@@ -689,7 +688,7 @@ func (c *Client) Start(ctx context.Context) (addr net.Addr, err error) {
 	timeout := time.After(c.config.StartTimeout)
 
 	// Start looking for the address
-	c.logger.Debug("waiting for RPC address", "path", cmd.Path)
+	log.Logger.Debug().Msgf("waiting for RPC address path: %v", cmd.Path)
 	select {
 	case <-timeout:
 		err = errors.New("timeout while waiting for plugin to start")
@@ -737,7 +736,7 @@ func (c *Client) Start(ctx context.Context) (addr net.Addr, err error) {
 		// implementation.
 		c.config.Plugins = pluginSet
 		c.negotiatedVersion = version
-		c.logger.Debug("using plugin", "version", version)
+		log.Logger.Debug().Msgf("using plugin version: %v", version)
 
 		switch parts[2] {
 		case "tcp":
@@ -840,7 +839,7 @@ func (c *Client) reattach() (net.Addr, error) {
 		pidWait(pid)
 
 		// Log so we can see it
-		c.logger.Debug("reattached plugin process exited")
+		log.Logger.Debug().Msg("reattached plugin process exited")
 
 		// Mark it
 		c.l.Lock()
@@ -980,7 +979,6 @@ var stdErrBufferSize = 3 * 1024 * 1024
 func (c *Client) logStderr(r io.Reader) {
 	defer c.clientWaitGroup.Done()
 	defer c.stderrWaitGroup.Done()
-	l := c.logger.Named(filepath.Base(c.config.Cmd.Path))
 
 	reader := bufio.NewReaderSize(r, stdErrBufferSize)
 	// continuation indicates the previous line was a prefix
@@ -992,26 +990,34 @@ func (c *Client) logStderr(r io.Reader) {
 		case err == io.EOF:
 			return
 		case err != nil:
-			l.Error("reading plugin stderr", "error", err)
+			log.Logger.Error().Msgf("reading plugin stderr: %v", err)
 			return
 		}
 
-		c.config.Stderr.Write(line)
+		if len(line) != 0 {
+			c.config.Stderr.Write(line)
+		}
 
 		// The line was longer than our max token size, so it's likely
 		// incomplete and won't unmarshal.
 		if isPrefix || continuation {
-			fmt.Print(string(line))
+			if len(line) != 0 {
+				fmt.Print(string(line))
+			}
 
 			// if we're finishing a continued line, add the newline back in
 			if !isPrefix {
-				fmt.Print("\n")
+				if len(line) != 0 {
+					fmt.Print("\n")
+				}
 			}
 
 			continuation = isPrefix
 			continue
 		}
-		logLine(line)
+		if len(line) != 0 {
+			logLine(line)
+		}
 	}
 }
 
